@@ -1,0 +1,119 @@
+const path = require('path');
+const express = require('express');
+const ejs = require('ejs');
+const bodyParser = require('body-parser');
+const mysql = require('mysql');
+const app = express();
+
+const connection=mysql.createConnection({
+    host:'sql12.freemysqlhosting.net',
+    user:'sql12357208',
+    password:'UXfDa8u2my',
+    database:'sql12357208',
+    multipleStatements: true
+});
+
+connection.connect(function(error){
+    if(!!error) console.log(error);
+    else console.log('Database Connected!');
+}); 
+
+//set views file
+app.set('views',path.join(__dirname,'views'));
+
+//set view engine
+app.set('view engine', 'ejs');
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+
+
+app.get('/',(req, res) => {
+    let sql = "SELECT * FROM users";
+    let query = connection.query(sql, (err, rows) => {
+        if(err) throw err;
+        res.render('user_index', {
+            title : 'User Details',
+            users : rows
+        });
+    });
+});
+
+
+app.get('/add',(req, res) => {
+    let sql = "SELECT * FROM transfers";
+    let query = connection.query(sql, (err, rows) => {
+        if(err) throw err;
+        res.render('user_add', {
+            title : 'Previous Transfer ',
+            transfers : rows
+        });
+    });
+});
+
+
+app.get('/transfer/:userId',(req, res) => {
+
+    let sqlquery1 = "SELECT * FROM users";
+    const userId = req.params.userId;
+    let sqlquery2 = `Select * from users where id = ${userId}`;
+
+    connection.query(sqlquery2, (err, rows1) => {
+      connection.query(sqlquery1, (err, rows) => {
+        if(err) throw err;
+        res.render('user_transfer', {
+            title : 'Credits Transfer',
+            users : rows,
+            user:rows1[0]
+                
+        });
+     });
+    });
+  
+});
+
+app.post('/updatecredits',(req, res) => {
+    // console.log('Update Credits')
+    const userId1 = req.body.id1;
+    const userId2 = req.body.id2;
+    // console.log(userId1);
+    // console.log(userId2);
+
+    let data = {sender: req.body.name1, receiver: req.body.id2, amount: req.body.quantity};    
+
+    var sql = "UPDATE users SET credits = credits - '"+req.body.quantity+"'   WHERE id = "+userId1 ; 
+    var sql2 = "UPDATE users SET credits = credits + '"+req.body.quantity+"' WHERE name = "+ "'"+userId2 +"'";
+    // var sql2 = `UPDATE users SET credits = credits + ${req.body.quantity} WHERE id = ${userId1}`;
+    var sql3 = "INSERT INTO transfers SET ?";
+     
+    connection.query(sql3, data,(err, results1) => {
+        connection.query(sql,(err, results2) => {
+            connection.query(sql2,(err, results3) => {
+                if(err) throw err;
+                res.redirect('/');
+            });
+        }); 
+    });
+});
+
+
+
+app.get('/view/:userId',(req, res) => {
+    const userId = req.params.userId;
+    let sql = `Select * from users where id = ${userId}`;
+    let query = connection.query(sql,(err, result) => {
+        if(err) throw err;
+        res.render('user_edit', {
+            title : 'User Details',
+            user : result[0]
+        });
+    });
+});
+
+
+
+var port = process.env.PORT || 3306;
+
+app.listen(port, () => {
+    console.log('Server is running at port 3306');
+});
